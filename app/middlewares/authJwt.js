@@ -3,17 +3,26 @@ const config = require("../config/auth.config.js");
 const db = require("../models");
 const User = db.user;
 const Role = db.role;
+const { TokenExpiredError } = jwt;
 
-verifyToken = (req, res, next) => {
-  let token = req.session.token;
+const catchError = (err, res) => {
+  if (err instanceof TokenExpiredError) {
+    return res.status(401).send({ message: "Token has expired. Not authorized to view this content." });
+  }
+
+  return res.sendStatus(401).send({ message: "Not authorized to view this content" });
+}
+
+const verifyToken = (req, res, next) => {
+  let token = req.headers["x-access-token"];
 
   if (!token) {
-    return res.status(403).send({ message: "Token not provided." });
+    return res.status(403).send({ message: "Token not provided" });
   }
 
   jwt.verify(token, config.secret, (err, decoded) => {
     if (err) {
-      return res.status(401).send({ message: "You are not authorized to view this content." });
+      return catchError(err, res);
     }
     req.userId = decoded.id;
     next();
