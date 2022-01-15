@@ -8,7 +8,6 @@ db.mongoose = mongoose;
 db.user = require("./user.model");
 db.role = require("./role.model");
 db.refreshToken = require("./refreshToken.model");
-db.proposal = require("./proposal.model");
 
 db.ROLES = ["voter", "admin"];
 

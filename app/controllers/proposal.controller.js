@@ -1,84 +1,145 @@
+const express = require("express");
 const db = require("../models");
-const { user: User, proposal: Proposal } = db;
+const Proposal = db.Proposals;
 
-exports.addProposal = (req, res) => {
-   
+// Create and Save a new Proposal
+exports.create = (req, res) => {
+    // Validate request
+    if (!req.body.title || !req.body.description) {
+        res.status(400).send({ message: "Title or content are empty. Please add content and re-submit." });
+        return;
+    }
+    
+    // Create a Proposal
     const proposal = new Proposal({
         title: req.body.title,
         description: req.body.description,
+        published: req.body.published ? req.body.published: false,
         closed: false
     });
 
-    proposal.save((err, proposal) => {
-        if (err) {
-            res.status(500).send({ message: err });
-            return;
-        }
+    // Save the Proposal in the database
+    proposal
+        .save(proposal)
+        .then(data => {
+            res.send(data);
+        })
+        .catch(err => {
+            res.status(500).send({ 
+                message:
+                  err.message || "An error was encountered while creating the Proposal, please try again."
+            });
+        });
+};
 
-        if (!req.body.title || !req.body.description) {
-            res.status(500).send({ message: "Proposal needs a title and description."});
-            return;
-        }
+// Retrieve all Proposals from the database
+exports.findAll = (req, res) => {
+    const title = req.query.title;
+    var condition = title ? { title: { $regex: new RegExp(title), $options: "i" } } : {};
 
-        res.send({ message: "Proposal saved successfully."});
+    Proposal.find(condition)
+        .then(data => {
+            res.send(data);
+        })
+        .catch(err => {
+            res.status(500).send({
+                message:
+                    err.message || "An error was encountered while retrieving tutorials."
+        });
     });
 };
 
-exports.addVote = (req, res) => {
+// Find a single Proposal with an id
+exports.findOne = (req, res) => {
+    const id = req.params.id;
 
-    if (!req.body.title || !req.body.username) {
-        res.status(500).send({ message: "You must include the proposal and username to add a vote." });
-        return;
+    Proposal.findById(id)
+        .then(data => {
+            if (!data)
+                res.status(404).send({ message: "Not able to find proposal with id: " + id});
+            else res.send(data);
+        })
+        .catch(err => {
+        res
+            .status(500)
+            .send({ message: "Error retrieving Proposal with id: " + id });
+        });
+};
+
+// Update a Proposal(close Proposal) by the id in the request
+/* TODO: Refactor update to ONLY allow for closing Proposals
+*/
+exports.update = (req, res) => {
+    if (!req.body) {
+        return res.status(400).send({
+            message: "Data to update can not be empty!"
+        });
     }
-
-    Proposal.findOne({ 
-        title: req.body.title
-    })
-        .exec(async (err, proposal) => {
-            if (err) {
-                res.status(500).send({ message: err});
-                return;
-            }
-
-            if (!proposal) {
-                res.status(404).send({ message: "Proposal not found."});
-            }
-
-            let voters = [];
-            
-            User.findOne({
-                username: req.body.username,
-            })
-                .exec(async (err, user) => {
-                    if (err) {
-                        res.status(500).send({ message: err });
-                        return;
-                    }
-                
-                    if (!user) {
-                        return res.status(404).send({ message: "User Not found." });
-                    }
-                    
-                    for (let i = 0; i < proposal.voters.length; i++) {
-                        if (proposal.voters[i].username === req.body.username) {
-                            return res.status(500).send({ message: `${proposal.voters[i].username} already voted on that proposal.`});
-                        }
-                    }
+  
+    const id = req.params.id;
+  
+    Proposal.findByIdAndUpdate(id, req.body, { useFindAndModify: false })
+        .then(data => {
+            if (!data) {
+                res.status(404).send({ 
+                    message: `Cannot update Proposal with id: ${id}. Maybe Proposal was not found!`
                 });
+            } else res.send({ message: "Proposal was updated successfully." });
+        })
+        .catch(err => {
+            res.status(500).send({
+                message: "Error updating Proposal with id: " + id
+            });
+        });
+};
 
-            })
-        .then(proposal =>
-            proposal.updateOne(
-                { title: req.body.title },
-                { $push: { voters: [req.body.username] } },
-                function(err, result) {
-                    if (err) {
-                        res.status(500).send({ message: err });
-                    }
-                    else {
-                        res.send(result);
-                    }
-                }
-            )
-        );
-}
+// Delete a Proposal with the specified id in the request
+exports.delete = (req, res) => {
+    const id = req.params.id;
+  
+    Proposal.findByIdAndRemove(id)
+        .then(data => {
+            if (!data) {
+                res.status(404).send({
+                    message: `Cannot delete Proposal with id: ${id}. Maybe Proposal was not found!`
+                });
+            } else {
+                res.send({
+                    message: "Proposal was deleted successfully!"
+                });
+            }
+        })
+        .catch(err => {
+            res.status(500).send({
+                message: "Could not delete Proposal with id: " + id
+            });
+        });
+};
+
+// Find all published Proposals
+exports.findAllPublished = (req, res) => {
+    Proposal.find({ published: true })
+        .then(data => {
+            res.send(data);
+        })
+        .catch(err => {
+            res.status(500).send({
+                message:
+                    err.message || "Some error occurred while retrieving proposals."
+            });
+        });
+};
+
+// Find all open Proposals(not closed)
+exports.findAllOpen = (req, res) => {
+    Proposal.find({ closed: false })
+        .then(data => {
+            res.send(data);
+        })
+        .catch(err => {
+            res.status(500).send({
+                message:
+                    err.message || "Some error occurred while retrieving proposals."
+            });
+        });
+};
