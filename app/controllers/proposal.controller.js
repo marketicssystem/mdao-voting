@@ -1,6 +1,5 @@
-const express = require("express");
 const db = require("../models");
-const Proposal = db.Proposals;
+const Proposal = db.proposals;
 
 // Create and Save a new Proposal
 exports.create = (req, res) => {

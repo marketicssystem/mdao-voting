@@ -1,7 +1,6 @@
-model.exports = mongoose => {
-  var Proposal = mongoose.model(
-    "Proposal",
-    new mongoose.Schema({
+module.exports = mongoose => {
+  var schema = mongoose.Schema(
+    {
       yesVoteCount: Number,
       noVoteCount: Number,
       title: String,
@@ -16,7 +15,6 @@ model.exports = mongoose => {
         ],
     },
     { timestamps: true }
-    )
   );
 
   schema.method("toJSON", function() {
@@ -25,6 +23,6 @@ model.exports = mongoose => {
     return object;
   });
 
-  const Proposal = mongoose.model("Proposal", schema);
+  const Proposal = mongoose.model("proposal", schema);
   return Proposal;
 };
